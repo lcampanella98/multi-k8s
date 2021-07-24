@@ -1,6 +1,6 @@
-docker build -t lorenzocampanella/multi-client:latest -t lorenzocampanella/multi-client:$SHA ./client/Dockerfile ./client
-docker build -t lorenzocampanella/multi-server:latest -t lorenzocampanella/multi-server:$SHA ./server/Dockerfile ./server
-docker build -t lorenzocampanella/multi-worker:latest -t lorenzocampanella/multi-worker:$SHA ./worker/Dockerfile ./worker
+docker build -t lorenzocampanella/multi-client:latest -t lorenzocampanella/multi-client:$SHA -f ./client/Dockerfile ./client
+docker build -t lorenzocampanella/multi-server:latest -t lorenzocampanella/multi-server:$SHA -f ./server/Dockerfile ./server
+docker build -t lorenzocampanella/multi-worker:latest -t lorenzocampanella/multi-worker:$SHA -f ./worker/Dockerfile ./worker
 
 docker push lorenzocampanella/multi-client
 docker push lorenzocampanella/multi-server
