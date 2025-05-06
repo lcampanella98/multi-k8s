@@ -1,13 +1,24 @@
-name: Deploy Frontend
+name: Deploy MultiDocker
 on:
   push:
     branches:
-      - master
+      - main # check your repo, your default branch might be master!
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: docker build -t lorenzocampanella/react-test -f Dockerfile.dev .
+      - run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - run: docker build -t lorenzocampanella/react-test -f ./client/Dockerfile.dev ./client
       - run: docker run -e CI=true lorenzocampanella/react-test npm test
+
+      - run: docker build -t lorenzocampanella/multi-client-2 ./client
+      - run: docker build -t lorenzocampanella/multi-nginx-2 ./nginx
+      - run: docker build -t lorenzocampanella/multi-server-2 ./server
+      - run: docker build -t lorenzocampanella/multi-worker-2 ./worker
+
+      - run: docker push lorenzocampanella/multi-client-2
+      - run: docker push lorenzocampanella/multi-nginx-2
+      - run: docker push lorenzocampanella/multi-server-2
+      - run: docker push lorenzocampanella/multi-worker-2
