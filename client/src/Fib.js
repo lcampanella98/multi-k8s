@@ -14,16 +14,27 @@ class Fib extends Component {
   }
 
   async fetchValues() {
-    const values = await axios.get('/api/values/current');
-    this.setState({ values: values.data });
+    try {
+      const values = await axios.get('/api/values/current');
+      console.log({values});
+      this.setState({ values: values.data });
+    } catch (err) {
+      console.error('Failed to fetch current values:', err);
+      this.setState({ values: {} }); // Or keep previous values
+    }
   }
-
+  
   async fetchIndexes() {
-    const seenIndexes = await axios.get('/api/values/all');
-    this.setState({
-      seenIndexes: seenIndexes.data,
-    });
+    try {
+      const seenIndexes = await axios.get('/api/values/all');
+      console.log({seenIndexes});
+      this.setState({ seenIndexes: seenIndexes.data });
+    } catch (err) {
+      console.error('Failed to fetch seen indexes:', err);
+      this.setState({ seenIndexes: [] }); // Or keep previous indexes
+    }
   }
+  
 
   handleSubmit = async (event) => {
     event.preventDefault();
@@ -35,7 +46,11 @@ class Fib extends Component {
   };
 
   renderSeenIndexes() {
-    return this.state.seenIndexes.map(({ number }) => number).join(', ');
+    if (Array.isArray(this.state.seenIndexes)) {
+      return this.state.seenIndexes.map(({ number }) => number).join(', ');
+      
+    }
+    return "No seen indexes";
   }
 
   renderValues() {
