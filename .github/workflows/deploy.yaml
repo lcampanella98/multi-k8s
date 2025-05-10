@@ -1,23 +1,36 @@
 name: Deploy MultiK8s
+
 on:
   push:
     branches:
-      - main
+      - '**'
 
 env:
-  SHA: $(git rev-parse HEAD)
+  SHA: ${{ github.sha }}
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Test
-        run: |-
-          echo '${{ secrets.DOCKER_PASSWORD }}' | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      - name: Docker Login
+        run: echo '${{ secrets.DOCKER_PASSWORD }}' | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      - name: Test Client
+        run: |
           docker build -t lorenzocampanella/react-test -f ./client/Dockerfile.dev ./client
           docker run -e CI=true lorenzocampanella/react-test npm test
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Docker Login
+        run: echo '${{ secrets.DOCKER_PASSWORD }}' | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
 
       - name: Set Service Key
         uses: 'google-github-actions/auth@v0'
@@ -29,24 +42,23 @@ jobs:
         with:
           project_id: multi-k8s-459301
 
-      - name: Auth
-        run: |-
-          gcloud --quiet auth configure-docker
+      - name: Auth Docker for GCR
+        run: gcloud --quiet auth configure-docker
 
-      - name: Get Credentials
+      - name: Get GKE Credentials
         uses: google-github-actions/get-gke-credentials@v0
         with:
           cluster_name: multi-k8s
           location: us-east1-b
 
-      - name: Build
-        run: |-
+      - name: Build Images
+        run: |
           docker build -t lorenzocampanella/multi-client:latest -t lorenzocampanella/multi-client:${{ env.SHA }} -f ./client/Dockerfile ./client
           docker build -t lorenzocampanella/multi-server:latest -t lorenzocampanella/multi-server:${{ env.SHA }} -f ./server/Dockerfile ./server
           docker build -t lorenzocampanella/multi-worker:latest -t lorenzocampanella/multi-worker:${{ env.SHA }} -f ./worker/Dockerfile ./worker
 
-      - name: Push
-        run: |-
+      - name: Push Images
+        run: |
           docker push lorenzocampanella/multi-client:latest
           docker push lorenzocampanella/multi-server:latest
           docker push lorenzocampanella/multi-worker:latest
@@ -55,8 +67,8 @@ jobs:
           docker push lorenzocampanella/multi-server:${{ env.SHA }}
           docker push lorenzocampanella/multi-worker:${{ env.SHA }}
 
-      - name: Apply
-        run: |-
+      - name: Apply K8s Configs
+        run: |
           kubectl apply -f k8s
           kubectl set image deployments/server-deployment server=lorenzocampanella/multi-server:${{ env.SHA }}
           kubectl set image deployments/client-deployment client=lorenzocampanella/multi-client:${{ env.SHA }}
